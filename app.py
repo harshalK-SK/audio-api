@@ -15,6 +15,20 @@ from typing import Dict, Any, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
+def convert_numpy_types(obj):
+    """Convert numpy types to native Python types for JSON serialization"""
+    if isinstance(obj, (np.float32, np.float64)):
+        return float(obj)
+    elif isinstance(obj, (np.int32, np.int64)):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    return obj
+
 app = FastAPI(title="Audio Quality Analysis API")
 
 # Add CORS middleware
@@ -469,7 +483,10 @@ async def analyze_audio(request: AudioAnalysisRequest):
             "channels": 1 if audio.ndim == 1 else audio.shape[0],
             "audio_type": "Mono" if audio.ndim == 1 else f"Stereo ({audio.shape[0]} channels)"
         }
-        
+
+  # ADD THIS LINE - Convert numpy types to Python native types
+        metrics = convert_numpy_types(metrics)
+      
         return AudioAnalysisResponse(
             metrics=metrics,
             status="success"
